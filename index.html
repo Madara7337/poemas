@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poeta Anónimo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Cormorant Garamond',Georgia,serif;min-height:100vh;padding:0 16px}
+::selection{background:#fff;color:#000}
+.site{max-width:640px;margin:0 auto;padding:80px 0 60px}
+header{text-align:center;margin-bottom:80px}
+header h1{font-size:2.8rem;font-weight:300;letter-spacing:0.15em;text-transform:uppercase}
+header .sub{font-size:1rem;font-family:'Inter',sans-serif;font-weight:300;color:#666;margin-top:12px;letter-spacing:0.3em;text-transform:lowercase}
+.divider{width:40px;height:1px;background:#333;margin:0 auto}
+.poem{margin:60px 0;text-align:center;animation:fadeIn 0.6s ease}
+.poem h2{font-size:1.6rem;font-weight:400;font-style:italic;margin-bottom:24px;letter-spacing:0.02em}
+.poem .verses{font-size:1.15rem;line-height:2;font-weight:300;white-space:pre-line}
+.poem .stanza{margin:20px 0}
+.poem .date{font-family:'Inter',sans-serif;font-size:0.7rem;color:#555;letter-spacing:0.2em;text-transform:uppercase;margin-top:32px}
+.empty{text-align:center;color:#444;font-style:italic;font-size:1.1rem;margin:100px 0}
+.loading{text-align:center;color:#333;font-family:'Inter',sans-serif;font-size:0.85rem;letter-spacing:0.1em}
+footer{text-align:center;padding:60px 0 40px;border-top:1px solid #111;font-family:'Inter',sans-serif;font-size:0.7rem;color:#333;letter-spacing:0.2em}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(max-width:480px){
+  header h1{font-size:2rem}
+  .poem .verses{font-size:1rem}
+  .site{padding:60px 0 40px}
+}
+</style>
+</head>
+<body>
+<div class="site">
+  <header>
+    <h1>Poeta Anónimo</h1>
+    <p class="sub">versos desde la oscuridad</p>
+  </header>
+  <div class="divider"></div>
+  <main id="poems">
+    <p class="loading">cargando versos...</p>
+  </main>
+  <footer>poeta anónimo &copy; 2026</footer>
+</div>
+<script>
+const REPO='Madara7337/poemas',DIR='poems';
+async function load(){
+  const el=document.getElementById('poems');
+  try{
+    const r=await fetch(`https://api.github.com/repos/${REPO}/contents/${DIR}`);
+    if(!r.ok)throw 0;
+    let files=(await r.json()).filter(f=>f.name.endsWith('.md')&&f.name!=='.gitkeep');
+    files.sort((a,b)=>b.name.localeCompare(a.name));
+    if(!files.length){el.innerHTML='<p class="empty">No hay versos aún...</p>';return}
+    el.innerHTML='';
+    for(const f of files){
+      const raw=await fetch(f.download_url);
+      const txt=await raw.text();
+      const p=parse(txt);
+      const div=document.createElement('div');
+      div.className='poem';
+      const stanzas=p.body.split(/\n{2,}/).map(s=>`<div class="stanza">${s}</div>`).join('');
+      div.innerHTML=`<h2>${p.title||'Sin título'}</h2><div class="verses">${stanzas}</div>${p.date?`<p class="date">${fmtDate(p.date)}</p>`:''}`;
+      el.appendChild(div);
+      if(files.indexOf(f)<files.length-1){
+        const hr=document.createElement('div');hr.className='divider';el.appendChild(hr);
+      }
+    }
+  }catch(e){el.innerHTML='<p class="empty">No hay versos aún...</p>'}
+}
+function parse(t){
+  const m=t.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)/);
+  if(!m)return{title:'',date:'',body:t.trim()};
+  const meta={};m[1].split('\n').forEach(l=>{const i=l.indexOf(':');if(i>0)meta[l.slice(0,i).trim()]=l.slice(i+1).trim()});
+  return{...meta,body:m[2].trim()};
+}
+function fmtDate(d){
+  const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const[y,m,day]=d.split('-');
+  return`${parseInt(day)} de ${months[parseInt(m)-1]} ${y}`;
+}
+load();
+</script>
+</body>
+</html>
